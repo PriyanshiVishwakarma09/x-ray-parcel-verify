@@ -222,25 +222,6 @@ Each output image contains the classification text rendered on the top-left corn
 
 ---
 
-## Possible Improvements
-
-- Replace the hardcoded YOLOv7 path with a configurable environment variable
-- Add a Docker setup for reproducible deployment
-- Add a simple HTML upload form or frontend client
-- Add request validation and file-size limits
-- Add logging and structured error handling
-- Document label meanings and expected detection combinations
-- Add example images and sample outputs
-
----
-
-## License
-
-No license file was found in the repository.  
-Add one if you want to define usage and redistribution terms.
-
----
-
 ## Author
 
 Created by **TheBadassProgrammer**
