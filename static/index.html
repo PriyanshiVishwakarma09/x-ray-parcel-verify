@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>X-Ray Parcel Verify — AI Security Inspection Terminal</title>
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            },
+            darkBg: '#0b0f19',
+            cardBg: '#111827',
+            borderColor: '#1f2937'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes scan {
+      0% { top: 0%; opacity: 0.8; }
+      50% { opacity: 1; }
+      100% { top: 100%; opacity: 0.8; }
+    }
+    .scanner-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #3b82f6, #60a5fa, transparent);
+      box-shadow: 0 0 15px #3b82f6;
+      animation: scan 2s linear infinite;
+    }
+  </style>
+</head>
+<body class="bg-darkBg text-slate-100 min-h-screen font-sans antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-borderColor bg-cardBg/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-500/30">
+          <i data-lucide="scan" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            X-Ray Parcel Verify
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">AI v2.0</span>
+          </h1>
+          <p class="text-xs text-slate-400">Automated E-Commerce & Customs Inspection Terminal</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <!-- Live System Health Pill -->
+        <div id="health-pill" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="health-text">Models Online (YOLOv7 & v8)</span>
+        </div>
+
+        <a href="/docs" target="_blank" class="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-borderColor hover:bg-slate-800 transition">
+          <i data-lucide="file-code" class="w-4 h-4"></i>
+          <span>Swagger Docs</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- Hero / Stats Banner -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-cardBg border border-borderColor p-4 rounded-xl flex items-center gap-4">
+        <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-lg border border-indigo-500/20">
+          <i data-lucide="layers" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Primary Detector</p>
+          <p class="text-sm font-semibold text-white">YOLOv7 (26 Classes)</p>
+        </div>
+      </div>
+      <div class="bg-cardBg border border-borderColor p-4 rounded-xl flex items-center gap-4">
+        <div class="p-3 bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/20">
+          <i data-lucide="smartphone" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Secondary Validator</p>
+          <p class="text-sm font-semibold text-white">YOLOv8 (iPhone Air)</p>
+        </div>
+      </div>
+      <div class="bg-cardBg border border-borderColor p-4 rounded-xl flex items-center gap-4">
+        <div class="p-3 bg-blue-500/10 text-blue-400 rounded-lg border border-blue-500/20">
+          <i data-lucide="cpu" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Execution Engine</p>
+          <p class="text-sm font-semibold text-white">PyTorch CPU Inference</p>
+        </div>
+      </div>
+      <div class="bg-cardBg border border-borderColor p-4 rounded-xl flex items-center gap-4">
+        <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20">
+          <i data-lucide="shield-check" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Verification Mode</p>
+          <p class="text-sm font-semibold text-white">Anti-Fraud Heuristics</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload & Live Inspection Workspace -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Left Column: Upload Zone & Controls (5 Cols) -->
+      <div class="lg:col-span-5 space-y-6">
+        
+        <!-- Drag & Drop Card -->
+        <div class="bg-cardBg border border-borderColor rounded-2xl p-6 shadow-xl">
+          <h2 class="text-base font-semibold text-white flex items-center gap-2 mb-2">
+            <i data-lucide="upload-cloud" class="w-5 h-5 text-blue-400"></i>
+            Upload Parcel X-Ray Scan
+          </h2>
+          <p class="text-xs text-slate-400 mb-5">
+            Select or drag an X-ray scanner image to inspect internal electronics & verify authenticity.
+          </p>
+
+          <!-- Dropzone -->
+          <div id="dropzone" class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl p-8 text-center cursor-pointer transition bg-slate-900/50 hover:bg-slate-900 group">
+            <input type="file" id="file-input" accept="image/*" class="hidden" />
+            <div class="flex flex-col items-center justify-center">
+              <div class="p-4 bg-slate-800 text-slate-400 group-hover:text-blue-400 group-hover:bg-blue-500/10 rounded-full transition mb-3">
+                <i data-lucide="image-up" class="w-8 h-8"></i>
+              </div>
+              <p class="text-sm font-medium text-slate-200 mb-1">
+                <span class="text-blue-400 underline">Click to upload</span> or drag and drop
+              </p>
+              <p class="text-xs text-slate-500">Supports JPG, PNG, WEBP (Max 20MB)</p>
+            </div>
+          </div>
+
+          <!-- Selected File Details (Hidden by default) -->
+          <div id="file-preview-card" class="hidden mt-4 p-3 bg-slate-800/80 rounded-lg border border-slate-700 flex items-center justify-between">
+            <div class="flex items-center space-x-3 overflow-hidden">
+              <div class="p-2 bg-blue-500/20 text-blue-400 rounded">
+                <i data-lucide="file-image" class="w-5 h-5"></i>
+              </div>
+              <div class="truncate">
+                <p id="file-name" class="text-xs font-medium text-white truncate">sample.jpg</p>
+                <p id="file-size" class="text-xs text-slate-400">0 KB</p>
+              </div>
+            </div>
+            <button id="remove-file-btn" class="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-red-400 transition">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Analyze Action Button -->
+          <button id="analyze-btn" disabled class="w-full mt-5 py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
+            <i data-lucide="scan-search" class="w-4 h-4"></i>
+            <span>Scan & Verify Parcel</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Visual Result & Breakdown (7 Cols) -->
+      <div class="lg:col-span-7 space-y-6">
+        
+        <!-- Inspection Display Screen -->
+        <div class="bg-cardBg border border-borderColor rounded-2xl p-6 shadow-xl flex flex-col min-h-[460px]">
+          
+          <div class="flex items-center justify-between pb-4 border-b border-borderColor mb-4">
+            <h2 class="text-base font-semibold text-white flex items-center gap-2">
+              <i data-lucide="monitor" class="w-5 h-5 text-blue-400"></i>
+              Scan Results & Visual Annotations
+            </h2>
+            <div id="status-badge" class="hidden px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5">
+              <!-- Dynamically populated badge -->
+            </div>
+          </div>
+
+          <!-- Empty State (Before Upload) -->
+          <div id="empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500">
+            <div class="p-4 bg-slate-900 rounded-2xl border border-slate-800 mb-4 text-slate-600">
+              <i data-lucide="scan-line" class="w-12 h-12"></i>
+            </div>
+            <h4 class="text-sm font-medium text-slate-300 mb-1">Awaiting X-Ray Scan</h4>
+            <p class="text-xs text-slate-500 max-w-sm">
+              Upload an image to trigger the dual-model ML detection pipeline.
+            </p>
+          </div>
+
+          <!-- Scanning Animation State -->
+          <div id="scanning-state" class="hidden flex-1 flex flex-col items-center justify-center p-12">
+            <div class="relative w-48 h-48 border border-blue-500/30 rounded-xl bg-slate-900/60 overflow-hidden flex items-center justify-center mb-6 shadow-inner">
+              <div class="scanner-line"></div>
+              <i data-lucide="cpu" class="w-12 h-12 text-blue-500/40 animate-pulse"></i>
+            </div>
+            <p class="text-sm font-semibold text-white mb-1">Analyzing Scan Layers...</p>
+            <p class="text-xs text-slate-400">Running YOLOv7 component extraction & anti-fraud heuristics</p>
+          </div>
+
+          <!-- Result View State (After inference) -->
+          <div id="result-state" class="hidden space-y-6 flex-1 flex flex-col justify-between">
+            
+            <!-- Result Image Container -->
+            <div class="relative rounded-xl overflow-hidden border border-slate-700 bg-black flex items-center justify-center max-h-[420px]">
+              <img id="result-img" src="" alt="Analyzed Result" class="max-h-[420px] w-auto object-contain" />
+              <a id="download-img-btn" href="#" target="_blank" class="absolute bottom-3 right-3 px-3 py-1.5 bg-slate-900/80 hover:bg-slate-900 backdrop-blur text-xs font-medium text-slate-200 border border-slate-700 rounded-lg flex items-center gap-1.5 transition">
+                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                <span>Open Full Image</span>
+              </a>
+            </div>
+
+            <!-- Classification & Component Cards -->
+            <div class="space-y-4">
+              
+              <!-- Verdict Banner -->
+              <div id="verdict-card" class="p-4 rounded-xl border flex items-start gap-3">
+                <div id="verdict-icon" class="p-2 rounded-lg mt-0.5">
+                  <i data-lucide="shield-check" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs uppercase tracking-wider font-semibold text-slate-400">AI Verification Verdict</h4>
+                  <p id="verdict-title" class="text-base font-bold text-white mt-0.5">iPhone Detected</p>
+                  <p id="verdict-desc" class="text-xs text-slate-300 mt-1"></p>
+                </div>
+              </div>
+
+              <!-- Detected Components Breakdown -->
+              <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+                  <span>Detected Internal Hardware Components</span>
+                  <span id="detected-count-badge" class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[10px]">0 Components</span>
+                </h4>
+                
+                <div id="components-list" class="space-y-2.5">
+                  <!-- Dynamically populated component rows -->
+                </div>
+              </div>
+
+              <!-- Raw JSON Details Accordion -->
+              <details class="group bg-slate-900/50 border border-slate-800 rounded-xl p-3 text-xs">
+                <summary class="font-medium text-slate-400 hover:text-slate-200 cursor-pointer flex items-center justify-between">
+                  <span>View Raw API Response JSON</span>
+                  <i data-lucide="chevron-down" class="w-4 h-4 transition group-open:rotate-180"></i>
+                </summary>
+                <pre id="raw-json" class="mt-3 p-3 bg-black/60 rounded-lg text-emerald-400 font-mono text-[11px] overflow-x-auto max-h-48"></pre>
+              </details>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Script for UI Logic & API Communication -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const filePreviewCard = document.getElementById('file-preview-card');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
+    const removeFileBtn = document.getElementById('remove-file-btn');
+
+    const emptyState = document.getElementById('empty-state');
+    const scanningState = document.getElementById('scanning-state');
+    const resultState = document.getElementById('result-state');
+    const resultImg = document.getElementById('result-img');
+    const downloadImgBtn = document.getElementById('download-img-btn');
+    const statusBadge = document.getElementById('status-badge');
+    const verdictCard = document.getElementById('verdict-card');
+    const verdictIcon = document.getElementById('verdict-icon');
+    const verdictTitle = document.getElementById('verdict-title');
+    const verdictDesc = document.getElementById('verdict-desc');
+    const componentsList = document.getElementById('components-list');
+    const detectedCountBadge = document.getElementById('detected-count-badge');
+    const rawJson = document.getElementById('raw-json');
+
+    let currentFile = null;
+
+    // Check System Health on Load
+    async function checkHealth() {
+      try {
+        const res = await fetch('/health');
+        const data = await res.json();
+        if (data.status === 'healthy') {
+          document.getElementById('health-text').innerText = `Online (${data.device.toUpperCase()})`;
+        } else {
+          document.getElementById('health-text').innerText = 'Degraded';
+          document.getElementById('health-pill').className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-medium';
+        }
+      } catch (e) {
+        document.getElementById('health-text').innerText = 'Offline';
+        document.getElementById('health-pill').className = 'flex items-center space-x-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium';
+      }
+    }
+    checkHealth();
+
+    // Dropzone Events
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('border-blue-500', 'bg-slate-900');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('border-blue-500', 'bg-slate-900');
+    });
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('border-blue-500', 'bg-slate-900');
+      if (e.dataTransfer.files.length) {
+        handleFileSelect(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        handleFileSelect(e.target.files[0]);
+      }
+    });
+
+    function handleFileSelect(file) {
+      currentFile = file;
+      fileName.innerText = file.name;
+      fileSize.innerText = `${(file.size / 1024).toFixed(1)} KB`;
+      filePreviewCard.classList.remove('hidden');
+      analyzeBtn.removeAttribute('disabled');
+      lucide.createIcons();
+    }
+
+    removeFileBtn.addEventListener('click', () => {
+      currentFile = null;
+      fileInput.value = '';
+      filePreviewCard.classList.add('hidden');
+      analyzeBtn.setAttribute('disabled', 'true');
+    });
+
+    // Run Inspection
+    analyzeBtn.addEventListener('click', () => {
+      if (currentFile) {
+        processInspection(currentFile);
+      }
+    });
+
+    async function processInspection(file) {
+      emptyState.classList.add('hidden');
+      resultState.classList.add('hidden');
+      scanningState.classList.remove('hidden');
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+        scanningState.classList.add('hidden');
+        resultState.classList.remove('hidden');
+
+        if (response.ok && data.status === 'success') {
+          renderResults(data);
+        } else {
+          alert(`Inspection error: ${data.message || data.error || 'Server error'}`);
+        }
+      } catch (err) {
+        scanningState.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        alert('Network request failed: ' + err);
+      }
+    }
+
+    function renderResults(data) {
+      resultImg.src = data.result_image;
+      downloadImgBtn.href = data.result_image;
+      rawJson.innerText = JSON.stringify(data, null, 2);
+
+      const isDetected = data.classification.toLowerCase().includes('iphone detected') || (data.classification.includes('Detected') && !data.classification.includes('Not an iPhone'));
+
+      if (isDetected) {
+        statusBadge.className = 'px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400';
+        statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Genuine Device';
+        verdictCard.className = 'p-4 rounded-xl border flex items-start gap-3 bg-emerald-500/10 border-emerald-500/30';
+        verdictIcon.className = 'p-2 rounded-lg bg-emerald-500/20 text-emerald-400';
+        verdictIcon.innerHTML = '<i data-lucide="shield-check" class="w-5 h-5"></i>';
+        verdictTitle.innerText = data.classification;
+        verdictDesc.innerText = 'Required internal microchips and authentic component markers verified.';
+      } else {
+        statusBadge.className = 'px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 text-red-400';
+        statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> Verification Alert';
+        verdictCard.className = 'p-4 rounded-xl border flex items-start gap-3 bg-red-500/10 border-red-500/30';
+        verdictIcon.className = 'p-2 rounded-lg bg-red-500/20 text-red-400';
+        verdictIcon.innerHTML = '<i data-lucide="shield-alert" class="w-5 h-5"></i>';
+        verdictTitle.innerText = data.classification;
+        verdictDesc.innerText = 'Component signature mismatch. Package does not contain verified genuine hardware.';
+      }
+      statusBadge.classList.remove('hidden');
+
+      // Components breakdown
+      detectedCountBadge.innerText = `${data.detections_count} Detected`;
+      componentsList.innerHTML = '';
+
+      if (data.detections && data.detections.length) {
+        data.detections.forEach(det => {
+          const confPercent = Math.round(det.confidence * 100);
+          const row = document.createElement('div');
+          row.className = 'space-y-1';
+          row.innerHTML = `
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-medium text-slate-200 capitalize">${det.class.replace(/_/g, ' ')}</span>
+              <span class="font-mono text-slate-400">${confPercent}%</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full bg-blue-500 rounded-full transition-all duration-500" style="width: ${confPercent}%"></div>
+            </div>
+          `;
+          componentsList.appendChild(row);
+        });
+      } else {
+        componentsList.innerHTML = '<p class="text-xs text-slate-500 italic">No specific micro-components segmented.</p>';
+      }
+
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>
+

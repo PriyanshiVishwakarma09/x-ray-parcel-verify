@@ -1,227 +1,379 @@
-# X-Ray Parcel Verify
+# 📦 X-Ray Parcel Verify — Production ML & DevOps Platform
 
-A FastAPI-based computer vision API that analyzes uploaded X-ray images and classifies whether certain consumer electronics/components are present.  
-The project uses:
+[![Docker CI Pipeline](https://github.com/atharva635/x-ray-parcel-verify/actions/workflows/docker-ci.yml/badge.svg)](https://github.com/atharva635/x-ray-parcel-verify/actions/workflows/docker-ci.yml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Python](https://img.shields.io/badge/Python-3.10-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-- **YOLOv7** for the main object detection pipeline
-- **YOLOv8** for an additional iPhone Air-specific detection flow
-- **OpenCV** and **PyTorch** for image preprocessing and inference
-
-The API returns a text classification, the detected object labels, and a processed result image with the classification drawn on top.
-
----
-
-## Features
-
-- Upload an image through a REST API
-- Detect multiple object/component classes from X-ray images
-- Apply custom grouping logic to infer product-level results such as:
-  - iPhone Detected / Not an iPhone
-  - Apple Watch Detected / Not an Apple Watch
-  - iPad Detected / Not an iPad
-  - Apple Pencil Detected / Not an Apple pencil
-  - Apple Airpods Detected / Not an Apple Airpods
-  - Nikon Camera Detected
-  - Sony Camera Detected
-  - iPhone Air Detected / Not an iPhone Air
-- Save processed images to a static results folder
-- Return JSON response with:
-  - classification text
-  - detected classes
-  - iPhone Air classes
-  - result image URL
+An enterprise-ready, containerized Computer Vision REST API designed to inspect and verify parcel contents from X-ray scans. It detects internal electronics components (microchips, circuit boards, camera modules, sensors) and infers genuine vs. fraudulent or mismatched items (iPhones, Apple Watches, iPads, Apple Pencils, AirPods, and professional cameras).
 
 ---
 
-## How It Works
+## 📑 Table of Contents
 
-1. The uploaded image is saved to `static/my_results/`
-2. YOLOv7 runs detection on the image
-3. Detected classes are mapped to custom object names
-4. The detected labels are compared against predefined label groups
-5. A final classification string is generated
-6. YOLOv8 is used as an extra check for iPhone Air-related labels
-7. The classification is drawn on the output image
-8. The processed image is saved and returned in the API response
-
----
-
-## Repository Structure
-
-- `client_code.py` — main FastAPI application and detection logic
-- `24_july_detection.pt` — YOLOv7 model weights
-- `best.pt` — YOLOv8 model weights
-- `requirements.txt` — Python dependencies
-- `static/` — served files and detection results
-
----
-
-## Requirements
-
-This project is built for Python and requires:
-
-- Python 3.9+
-- PyTorch
-- OpenCV
-- FastAPI
-- Ultralytics
-- YOLOv7 source code available locally
-
-> Important: `client_code.py` currently uses a hardcoded local path for YOLOv7:
->
-> ```python
-> sys.path.append("D:/Projects/yolov7/yolov7")
-> ```
->
-> You will need to update this path to match your own YOLOv7 installation.
+- [System Architecture](#-system-architecture)
+- [Key Features](#-key-features)
+- [Tech Stack](#-tech-stack)
+- [Repository Structure](#-repository-structure)
+- [Getting Started](#-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Local Installation (Without Docker)](#local-installation-without-docker)
+- [Docker & Containerization](#-docker--containerization)
+  - [Build Docker Image](#1-build-docker-image)
+  - [Run with Docker CLI](#2-run-with-docker-cli)
+  - [Run with Docker Compose](#3-run-with-docker-compose)
+- [API Documentation & Usage](#-api-documentation--usage)
+  - [Endpoints](#endpoints)
+  - [cURL Example](#curl-example)
+  - [Python Example](#python-example)
+  - [Sample Response](#sample-response)
+- [CI/CD Pipeline](#-cicd-pipeline)
+- [Cloud Deployment (Render Guide)](#-cloud-deployment-render-guide)
+- [Security & Production Hardening](#-security--production-hardening)
+- [Troubleshooting](#-troubleshooting)
 
 ---
 
-## Installation
+## 🏛️ System Architecture
 
-Clone the repository:
-
-```bash
-git clone https://github.com/TheBadassProgrammer/x-ray-parcel-verify.git
-cd x-ray-parcel-verify
-```
-
-Create and activate a virtual environment:
-
-```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-Install any extra dependencies required by your YOLOv7 setup if they are not already included.
-
----
-
-## YOLOv7 Setup
-
-This project depends on YOLOv7 utility modules such as:
-
-- `models.experimental`
-- `utils.general`
-- `utils.torch_utils`
-- `utils.datasets`
-
-Make sure the YOLOv7 repository is available on your machine and that this line in `client_code.py` points to it:
-
-```python
-sys.path.append("D:/Projects/yolov7/yolov7")
-```
-
-Example:
-
-```python
-sys.path.append("/path/to/yolov7")
+```mermaid
+flowchart TD
+    Client["Client / Web UI / Inspector"] -->|POST /upload (X-Ray Image)| NGINX["API Gateway / Uvicorn Server"]
+    NGINX --> Router["FastAPI Router"]
+    
+    subgraph Container ["Docker Container (/app)"]
+        Router --> Sanitize["Input Validation & UUID Sanitization"]
+        Sanitize --> Preprocess["Letterbox Resize & Tensor Normalization"]
+        Preprocess --> Y7["YOLOv7 Model (24_july_detection.pt)<br/>26 Component Classes"]
+        Y7 --> NMS["Non-Maximum Suppression (NMS)"]
+        NMS --> BBox["Scale Bounding Boxes & Confidences"]
+        BBox --> Rules["Heuristic Correlation Engine"]
+        
+        Rules --> CheckPhone{"mobile_phone Detected?"}
+        CheckPhone -- Yes --> Y8["YOLOv8 Model (best.pt)<br/>iPhone Air Specific Features"]
+        CheckPhone -- No --> Aggregate["Aggregate Verification Output"]
+        Y8 --> Aggregate
+        
+        Aggregate --> Render["Visual Overlay & Text Banner"]
+        Render --> Storage[("Persistent Volume<br/>static/my_results/")]
+    end
+    
+    Storage --> Response["JSON Response + Annotated Image URL"]
+    Response --> Client
 ```
 
 ---
 
-## Running the Server
+## ✨ Key Features
 
-Start the FastAPI app with:
+- **Dual-Model Detection Pipeline:**
+  - **YOLOv7:** Primary object detection detecting 26 distinct internal hardware components (`iphone_chip`, `watch_pcb`, `apple_tab_pcb`, `airpod_pcb`, etc.).
+  - **YOLOv8:** Secondary specialized validator for iPhone Air architecture.
+- **Rule-Based Heuristic Inference:** Automatically correlates detected components to determine genuine items vs. counterfeits or missing parts.
+- **Bounding Box Visualization:** Draws colored bounding boxes, class labels, and confidence scores directly on the output image and returns normalized coordinates in the API payload.
+- **Production-Ready Dockerization:**
+  - Lightweight CPU-optimized base image (`python:3.10-slim`).
+  - PyTorch CPU wheels to drastically reduce container image size from ~5GB to ~1.3GB.
+  - Non-root user execution (`appuser:1000`) for container security.
+- **Automated CI/CD:** GitHub Actions workflow validating Python syntax, Docker build, health check, and end-to-end inference smoke testing.
+- **Production Safety:**
+  - File upload size limiting (default 20MB).
+  - Cryptographically secure UUID-based file naming to eliminate race conditions and path traversal attacks.
+  - Background thread execution in FastAPI preventing CPU blocking on the async event loop.
 
-```bash
-python client_code.py
-```
+---
 
-The server will run on:
+## 🛠️ Tech Stack
+
+| Component | Technology | Version | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Framework** | FastAPI | `>=0.110.0` | High-performance asynchronous REST API |
+| **ASGI Server** | Uvicorn | `>=0.28.0` | Production ASGI web server |
+| **ML Framework** | PyTorch (CPU) | `>=2.0.0` | Model inference & tensor computing |
+| **Detection Models** | YOLOv7 & YOLOv8 | Custom `.pt` | Object & component detection |
+| **Image Processing** | OpenCV Headless | `>=4.8.0` | Preprocessing, letterboxing, bounding box drawing |
+| **Container Engine** | Docker & Compose | Multi-stage | Isolated, reproducible deployment |
+| **CI/CD** | GitHub Actions | v4 | Automated builds, linting, and smoke tests |
+
+---
+
+## 📁 Repository Structure
 
 ```text
-http://0.0.0.0:8000
+x-ray-parcel-verify/
+├── .github/
+│   └── workflows/
+│       └── docker-ci.yml          # GitHub Actions CI/CD automation workflow
+├── static/
+│   └── my_results/                # Generated verification results & output images
+│       └── .gitkeep
+├── .dockerignore                  # Docker build context exclusions
+├── .gitignore                     # Git tracking exclusions
+├── 24_july_detection.pt           # YOLOv7 trained model weights (tracked via LFS)
+├── best.pt                        # YOLOv8 iPhone Air model weights
+├── client_code.py                 # FastAPI application & ML inference pipeline
+├── docker-compose.yml             # Docker Compose local orchestration config
+├── Dockerfile                     # Production multi-stage Docker build recipe
+├── requirements.txt               # Pinned Python production dependencies
+└── README.md                      # Comprehensive project documentation
 ```
 
 ---
 
-## API Endpoint
+## 🚀 Getting Started
 
-### `POST /upload`
+### Prerequisites
 
-Upload an image file for detection and classification.
+- Git & [Git LFS](https://git-lfs.com/) installed
+- Python 3.10+ (if running without Docker)
+- Docker Desktop or Docker Engine (recommended)
 
-#### Request
-- `file`: image file upload
+Clone the repository with Git LFS enabled to download model weights:
 
-#### Response Example
+```bash
+git clone https://github.com/atharva635/x-ray-parcel-verify.git
+cd x-ray-parcel-verify
+git lfs pull
+```
+
+---
+
+### Local Installation (Without Docker)
+
+1. **Clone YOLOv7 utilities** into the project directory:
+   ```bash
+   git clone --depth 1 https://github.com/WongKinYiu/yolov7.git yolov7
+   ```
+
+2. **Create and activate a virtual environment:**
+   ```bash
+   # Windows (PowerShell)
+   python -m venv .venv
+   .venv\Scripts\activate
+
+   # Linux / macOS
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install --upgrade pip
+   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+   pip install -r requirements.txt
+   ```
+
+4. **Start the server:**
+   ```bash
+   python client_code.py
+   ```
+   The API will be available at `http://127.0.0.1:8000`.
+
+---
+
+## 🐳 Docker & Containerization
+
+Using Docker ensures the application runs consistently across any operating system without managing system-level PyTorch or YOLOv7 path dependencies.
+
+### 1. Build Docker Image
+
+```bash
+docker build -t x-ray-parcel-verify:latest .
+```
+
+*Note: The Docker build installs CPU-optimized PyTorch and clones the official YOLOv7 repository into `/app/yolov7` inside the container.*
+
+### 2. Run with Docker CLI
+
+```bash
+docker run -d \
+  --name x-ray-verify \
+  -p 8000:8000 \
+  -v parcel_results:/app/static/my_results \
+  --restart unless-stopped \
+  x-ray-parcel-verify:latest
+```
+
+Verify that the container is healthy:
+
+```bash
+docker ps
+curl http://localhost:8000/health
+```
+
+### 3. Run with Docker Compose
+
+To spin up the service with persistent volumes and healthchecks in a single command:
+
+```bash
+docker compose up -d --build
+```
+
+To view logs or stop the service:
+
+```bash
+docker compose logs -f
+docker compose down
+```
+
+---
+
+## 📡 API Documentation & Usage
+
+Interactive Swagger documentation is available at:
+👉 **`http://localhost:8000/docs`**
+
+### Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/` | API status and links |
+| `GET` | `/health` | Healthcheck and model readiness probe |
+| `POST` | `/upload` | Upload X-ray image for component detection |
+| `GET` | `/static/...` | Serves processed result images |
+
+### cURL Example
+
+```bash
+curl -X POST "http://localhost:8000/upload" \
+  -H "accept: application/json" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@sample_parcel.jpg"
+```
+
+### Python Example
+
+```python
+import requests
+
+url = "http://localhost:8000/upload"
+file_path = "sample_parcel.jpg"
+
+with open(file_path, "rb") as image_file:
+    response = requests.post(url, files={"file": image_file})
+
+print(response.status_code)
+print(response.json())
+```
+
+### Sample Response
 
 ```json
 {
+  "status": "success",
   "classification": "iPhone Detected, Apple Watch Detected",
-  "detected_classes": ["mobile_phone", "iphone_chip"],
+  "results": [
+    "iPhone Detected",
+    "Apple Watch Detected"
+  ],
+  "detected_classes": [
+    "iphone_camera",
+    "iphone_chip",
+    "mobile_phone",
+    "watch",
+    "watch_chip"
+  ],
   "iphone_air_classes": [],
-  "result_image": "http://127.0.0.1:8000/static/my_results/detection_2026-07-05_12-00-00_example.jpg"
+  "detections_count": 5,
+  "detections": [
+    {
+      "class": "mobile_phone",
+      "confidence": 0.9412,
+      "box": [120, 85, 340, 510]
+    },
+    {
+      "class": "iphone_chip",
+      "confidence": 0.8845,
+      "box": [180, 210, 260, 290]
+    }
+  ],
+  "result_image": "http://localhost:8000/static/my_results/detection_2026-11-19_18-30-00_4f9a2e81d7c3.jpg"
 }
 ```
 
 ---
 
-## Example Usage
+## 🔄 CI/CD Pipeline
 
-### cURL
+The repository includes a production-grade GitHub Actions CI workflow in `.github/workflows/docker-ci.yml`.
 
-```bash
-curl -X POST "http://127.0.0.1:8000/upload" \
-  -F "file=@sample.jpg"
-```
-
-### Python
-
-```python
-import requests
-
-url = "http://127.0.0.1:8000/upload"
-
-with open("sample.jpg", "rb") as f:
-    response = requests.post(url, files={"file": f})
-
-print(response.json())
-```
+### Workflow Stages:
+1. **Checkout & LFS Fetch:** Clones repo and verifies model weights (`24_july_detection.pt`, `best.pt`).
+2. **Python Syntax Check:** Runs `py_compile` on `client_code.py`.
+3. **Docker Buildx Cache:** Builds the container using GitHub Actions layer caching.
+4. **Container Health Probe:** Launches the container and polls `/health` until models are loaded in memory.
+5. **End-to-End Smoke Test:** Synthesizes an image and sends a live `POST /upload` request to ensure inference and response formatting work end-to-end.
 
 ---
 
-## Output Files
+## ☁️ Cloud Deployment (Render Guide)
 
-Processed images are saved in:
+[Render](https://render.com) is recommended for deploying the Docker container with minimal setup.
 
-```text
-static/my_results/
-```
+### Step-by-Step Render Deployment:
 
-Each output image contains the classification text rendered on the top-left corner.
+1. **Push your code to GitHub:**
+   Ensure all changes and weights are pushed to your fork.
+
+2. **Log in to Render Dashboard:**
+   - Go to [dashboard.render.com](https://dashboard.render.com/).
+   - Click **New +** → Select **Web Service**.
+
+3. **Connect Your Repository:**
+   - Select `atharva635/x-ray-parcel-verify`.
+   - Choose branch: `feature/docker-devops-deployment` (or `main` after merging).
+
+4. **Configure Service:**
+   - **Name:** `x-ray-parcel-verify`
+   - **Environment:** `Docker`
+   - **Region:** Choose the region closest to you (e.g., Singapore, Frankfurt, Oregon).
+   - **Plan:** Free or Starter (PyTorch + YOLOv7 requires ~450MB–600MB RAM at runtime).
+   
+5. **Set Environment Variables:**
+   Under **Environment Variables**, add:
+   - `PORT`: `8000`
+   - `DEVICE`: `cpu`
+   - `TORCH_THREADS`: `2` (limits CPU thread allocations to keep memory within Free Tier limits).
+
+6. **Deploy:**
+   - Click **Create Web Service**.
+   - Render will build the `Dockerfile` automatically and spin up your live URL (e.g., `https://x-ray-parcel-verify.onrender.com`).
+   - Access Swagger docs at `https://x-ray-parcel-verify.onrender.com/docs`.
 
 ---
 
-## Notes
+## 🔒 Security & Production Hardening
 
-- The confidence threshold for YOLOv7 detections is currently set to `0.68`
-- The YOLOv8 iPhone Air check only runs when `mobile_phone` is detected by YOLOv7
-- The logic is rule-based and depends on combinations of detected classes
-- Some category names in the code reflect custom training labels and device-specific heuristics
-
----
-
-## Limitations
-
-- The project expects local access to both model weight files
-- YOLOv7 dependency path is hardcoded and must be updated manually
-- Classification logic is heuristic-based and may need tuning for better accuracy
-- No frontend is included in the repository
-- No Dockerfile or deployment configuration is currently provided
+- **Non-Root Execution:** Container runs under `appuser` (UID 1000) rather than root.
+- **UUID File Storage:** User-provided filenames are discarded; each file receives a sanitized, collision-resistant UUID (`uuid4().hex`) preventing directory traversal attacks.
+- **Memory Optimization:** Explicit `gc.collect()` and configurable `TORCH_THREADS=2` prevent Out-Of-Memory (OOM) crashes on constrained cloud instances.
+- **Input Sanitization:** Enforces image MIME verification and maximum upload size limits (default 20MB).
 
 ---
 
-## Author
+## ❓ Troubleshooting
 
-Created by **TheBadassProgrammer**
+| Issue | Cause | Solution |
+| :--- | :--- | :--- |
+| `ModuleNotFoundError: No module named 'models'` | YOLOv7 source code not in Python path | Set `YOLOV7_PATH=/app/yolov7` or clone YOLOv7 locally as shown in Getting Started. |
+| `torch.cuda.OutOfMemoryError` or Container killed (OOM) | Memory exhausted during inference | Ensure `DEVICE=cpu` and `TORCH_THREADS=1` or `2` in environment variables. |
+| Model weights missing or corrupt | Git LFS pointer instead of actual weights | Run `git lfs install && git lfs pull` to fetch binary weights. |
+| Port 8000 already in use | Host port conflict | Change port mapping in docker command: `-p 8080:8000`. |
+
+---
+
+## 👨‍💻 Contributing
+
+Contributions are welcome! Please follow these steps:
+1. Fork the Project.
+2. Create your Feature Branch (`git checkout -b feature/docker-devops-deployment`).
+3. Commit your Changes (`git commit -m 'feat: Add Docker and CI/CD workflow'`).
+4. Push to the Branch (`git push origin feature/docker-devops-deployment`).
+5. Open a Pull Request.
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
