@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 import torch
 from fastapi import FastAPI, File, UploadFile, Request, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
@@ -128,9 +128,48 @@ object_dict = {
     24: "apple_tab_chip", 25: "bus_dot"
 }
 
-# ================= HEALTH & ROOT ENDPOINTS =================
-@app.get("/", tags=["General"])
-def root_status():
+# ================= HOUSEKEEPING / STORAGE CLEANUP =================
+def cleanup_old_results(max_files: int = 60):
+    """
+    Production housekeeping: prevents unbounded disk growth by deleting
+    the oldest generated result files when the directory exceeds limit.
+    """
+    try:
+        if not os.path.isdir(RESULTS_DIR):
+            return
+        files = [
+            os.path.join(RESULTS_DIR, f)
+            for f in os.listdir(RESULTS_DIR)
+            if f.startswith("detection_") and (f.endswith(".jpg") or f.endswith(".png"))
+        ]
+        if len(files) > max_files:
+            files.sort(key=os.path.getmtime)
+            for old_file in files[: len(files) - max_files]:
+                try:
+                    os.remove(old_file)
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"[CLEANUP ERROR] {e}")
+
+# ================= HEALTH & UI ENDPOINTS =================
+@app.get("/", tags=["UI"], include_in_schema=False)
+def serve_ui():
+    """Serves the interactive web terminal dashboard."""
+    index_file = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return {
+        "service": "X-Ray Parcel Verify API",
+        "status": "online",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
+@app.get("/api/status", tags=["General"])
+def api_status():
+    """Programmatic API status endpoint."""
     return {
         "service": "X-Ray Parcel Verify API",
         "status": "online",
@@ -390,6 +429,9 @@ def upload_image(request: Request, file: UploadFile = File(...)):
         output_filename = f"detection_{timestamp}_{unique_id}.jpg"
         output_path = os.path.join(RESULTS_DIR, output_filename)
         cv2.imwrite(output_path, img0)
+
+        # Automatic storage housekeeping
+        cleanup_old_results(max_files=60)
 
         # Clean up temporary upload if separate
         if os.path.exists(input_image_path) and input_image_path != output_path:
