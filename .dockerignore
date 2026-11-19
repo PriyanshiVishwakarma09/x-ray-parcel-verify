@@ -1,0 +1,35 @@
+# Git and GitHub
+.git
+.gitignore
+.gitattributes
+.github
+
+# Python bytecode and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+ENV/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# CI and testing artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local results folder (prevent copying previous run artifacts into Docker layer)
+static/my_results/*
+!static/my_results/.gitkeep
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose*.yml
