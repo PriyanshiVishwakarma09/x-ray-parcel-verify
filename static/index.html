@@ -400,7 +400,7 @@
       downloadImgBtn.href = data.result_image;
       rawJson.innerText = JSON.stringify(data, null, 2);
 
-      const isDetected = data.classification.includes('Detected') && !data.classification.includes('Not an');
+      const isDetected = data.classification.toLowerCase().includes('iphone detected') || (data.classification.includes('Detected') && !data.classification.includes('Not an iPhone'));
 
       if (isDetected) {
         statusBadge.className = 'px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400';
