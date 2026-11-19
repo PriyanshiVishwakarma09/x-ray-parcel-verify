@@ -45,3 +45,4 @@ Thumbs.db
 # Do not commit generated test inference images in static/my_results
 static/my_results/*
 !static/my_results/.gitkeep
+

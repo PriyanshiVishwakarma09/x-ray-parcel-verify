@@ -1,9 +1,9 @@
 # ===================================================
-# Multi-stage / Production Dockerfile for X-Ray Parcel Verify
-# Base: Python 3.10 slim (Debian Bullseye) for stability with PyTorch & YOLOv7
+# Production Dockerfile for X-Ray Parcel Verify
+# Base: Python 3.10 slim (Debian Bookworm)
 # ===================================================
 
-FROM python:3.10-slim-bullseye
+FROM python:3.10-slim-bookworm
 
 # Prevent Python from writing .pyc files and enable unbuffered logging
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -29,13 +29,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Clone official YOLOv7 repository for architecture and inference utilities
 RUN git clone --depth 1 https://github.com/WongKinYiu/yolov7.git /app/yolov7
 
-# Upgrade pip and install CPU-only PyTorch (drastically reduces image size from ~5GB to ~1.3GB)
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
-
-# Copy and install application dependencies
+# Upgrade pip and install CPU-only PyTorch & application dependencies
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Create non-root user for security best practices
 RUN useradd -m -u 1000 appuser && \
